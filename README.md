@@ -1,6 +1,6 @@
-# File listing
+# Kotlin ktor sample project
 
-A sample project for [Ktor](https://ktor.io) showing how to create a file listing support for [static files](https://ktor.io/docs/serving-static-content.html).
+A sample project for [Ktor](https://ktor.io) with a empty main for a quick start.
 
 ## Running
 
@@ -9,5 +9,3 @@ Execute this command to run the sample:
 ```bash
 ./gradlew run
 ```
-
-Then, navigate to [http://localhost:8080/](http://localhost:8080/) to see the sample home page.
