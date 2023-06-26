@@ -5,16 +5,15 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.bodyAsChannel
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
 import kotlinx.coroutines.*
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import io.ktor.client.features.*
-import io.ktor.client.features.json.*
-import io.ktor.client.features.json.serializer.*
-import io.ktor.client.features.logging.*
 import io.ktor.http.*
+import io.ktor.util.cio.writeChannel
+import io.ktor.utils.io.copyAndClose
 import kotlinx.coroutines.channels.*
 import java.io.File
 
@@ -38,15 +37,20 @@ class SpaceXApi {
     }
 
     //second suspend
-    suspend fun downloadArticle(launch: RocketLaunch, client: HttpClient) {
-        val url = launch.links.article
-        println("article for launch ${launch.flightNumber} : ${url}" )
+    suspend fun downloadArticle(launch: RocketLaunch, client: SpaceXApi) {
+        val url: String? = launch.links.article
+        println("article for launch ${launch.flightNumber} : $url" )
 
         GlobalScope.launch(Dispatchers.IO) {
-            val file = File("C:/users/willi/OneDrive/Bureau/Articles/${url.pathSegments.last()}")
-            client.get(url).bodyAsChannel().copyAndClose(file.writeChannel())
-            println("Finished downloading..")
-        }
+            val nameFile = url?.substringBeforeLast('/')
+            val file = File("C:/users/willi/OneDrive/Bureau/Articles/${nameFile?.substringAfterLast('/')}.html")
+            if (!url.isNullOrEmpty()) {
+                println("Downloading.. $file")
+                    client.httpClient.get(url).bodyAsChannel().copyAndClose(file.writeChannel())
+                    println("Finished downloading..")
+                }
+            }
+
     }    
 }
 
@@ -57,11 +61,9 @@ fun main() = runBlocking<Unit> {
 
     val launches: List<RocketLaunch> = service.getAllLaunches() //launch first suspend
 
-    var i = 0               //launch second suspend
-    for (l in launches) {
-        println("Launch $i : ${l}")
+    for ((i, l) in launches.withIndex()) {
+        println("Launch $i : $l")
         service.downloadArticle(l, service)
-        i++
     }
     
     println("OPERATION FINISHED.")
