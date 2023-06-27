@@ -1,4 +1,3 @@
-
 package fr.wildcodeschool.kotlinsample
 
 import io.ktor.client.*
@@ -14,10 +13,9 @@ import kotlinx.serialization.Serializable
 import io.ktor.http.*
 import io.ktor.util.cio.writeChannel
 import io.ktor.utils.io.copyAndClose
+import io.ktor.utils.io.tryCopyException
 import kotlinx.coroutines.channels.*
 import java.io.File
-
-
 
 
 class SpaceXApi {
@@ -25,6 +23,7 @@ class SpaceXApi {
     private val httpClient = HttpClient {
         install(ContentNegotiation) {
             json(Json {
+                isLenient = true
                 ignoreUnknownKeys = true
                 useAlternativeNames = false
             })
@@ -38,25 +37,27 @@ class SpaceXApi {
 
     //second suspend
     suspend fun downloadArticle(launch: RocketLaunch, client: SpaceXApi) {
-        val url: String? = launch.links.article
-        println("article for launch ${launch.flightNumber} : $url" )
+        try {
+            val url: String? = launch.links.article
+            println("article for launch ${launch.flightNumber} : $url")
 
-        GlobalScope.launch(Dispatchers.IO) {
             val nameFile = url?.substringBeforeLast('/')
             val file = File("C:/users/willi/OneDrive/Bureau/Articles/${nameFile?.substringAfterLast('/')}.html")
             if (!url.isNullOrEmpty()) {
+                val urlToDl = Url(launch.links.article)
                 println("Downloading.. $file")
-                    client.httpClient.get(url).bodyAsChannel().copyAndClose(file.writeChannel())
-                    println("Finished downloading..")
-                }
+                client.httpClient.get(urlToDl).bodyAsChannel().copyAndClose(file.writeChannel())
+                println("Finished downloading... file is available here : " + file.getAbsolutePath())
             }
-
-    }    
+        } catch ( e: Exception) {
+            println (e)
+        }
+    }
 }
 
 fun main() = runBlocking<Unit> {
     println("OPERATION STARTED.")
-    
+
     val service = SpaceXApi() //instance of
 
     val launches: List<RocketLaunch> = service.getAllLaunches() //launch first suspend
@@ -65,7 +66,7 @@ fun main() = runBlocking<Unit> {
         println("Launch $i : $l")
         service.downloadArticle(l, service)
     }
-    
+
     println("OPERATION FINISHED.")
 }
 
